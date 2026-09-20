@@ -17,20 +17,20 @@ _TRAIN_LOCK_PATH = os.path.join(CLIENT_STATE_DIR, ".train.lock")
 def train_lock():
     """Cross-task mutual exclusion around BaseModelCache's shared PeftModel.
 
-    Flower's simulation backend can dispatch multiple sampled clients' fit()
-    calls with overlapping execution, even with client-resources
-    num_gpus=1.0 requesting the whole GPU per activation (confirmed
-    empirically: with 5 clients, most fit() calls raced and hit Opacus's
-    "Trying to add hooks twice to the same model" -- num_gpus governs Ray's
-    scheduling weight, not a hard mutual-exclusion lock on client task
-    execution). A plain in-process threading.Lock was tried first and did
-    NOT reliably prevent this -- it's unclear whether Ray's task dispatch
-    for this backend genuinely uses separate OS threads, separate
-    (sub)processes sharing a reported pid, or something else, so an
-    in-memory Python lock's shared-object assumption can't be trusted. An
-    OS-level flock() on a real file works regardless of which of those is
-    actually true, since the kernel enforces it independent of any Python
-    object identity.
+    Flower's simulation backend can dispatch multiple sampled clients' fit() calls with overlapping execution, even with client-resources
+    num_gpus=1.0 requesting the whole GPU per activation 
+    
+    With 5 clients, most fit() calls raced and hit Opacus's "Trying to add hooks twice to the same model" -- num_gpus governs Ray's
+    scheduling weight, not a hard mutual-exclusion lock on client task execution. 
+    A plain in-process threading.Lock was tried first and did NOT reliably prevent this -- it's unclear whether Ray's task dispatch
+    for this backend genuinely uses separate OS threads, separate (sub)processes sharing a reported pid, or something else, so an
+    in-memory Python lock's shared-object assumption can't be trusted. 
+
+    An OS-level flock() works, since the kernel enforces it independent of any Python object identity.
+
+    The remaining suspect is concurrency inside a single Ray actor's own task execution (e.g. how ClientAppActor.run is
+    invoked/awaited as a remote call, or something in Ray's own async task scheduling for a single actor) -- this needs checking against
+    Ray's source, not flwr's, since flwr only submits the task and blocks on the future (RayBackend.process_message). 
     """
     os.makedirs(CLIENT_STATE_DIR, exist_ok=True)
     with open(_TRAIN_LOCK_PATH, "w") as f:
