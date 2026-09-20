@@ -7,21 +7,15 @@ GLOBAL_ADAPTER_DIR = os.path.join(os.path.dirname(__file__), "global-adapter")
 
 
 def aggregate_privacy_reports(num_clients, num_rounds):
-    """Reads every client_state/client_*_privacy_report.json (written fresh
-    each round by client_app.py's fit(), so the achieved_epsilon in the
-    highest-numbered round per client is that client's true cumulative spend
-    -- see train.py's accountant_history plumbing), and reports the
-    system-level guarantee as the worst-case (max) cumulative epsilon across
-    clients: the standard, conservative way to state a per-record DP
-    guarantee for a federation where any client's data could be the "record"
-    of interest.
+    """
+    Reads every client_state/client_*_privacy_report.json (written fresh each round by client_app.py's fit(), so the achieved_epsilon in the
+    highest-numbered round per client is that client's true cumulative spend -- see train.py's accountant_history plumbing), and reports the
+    system-level guarantee as the worst-case (max) cumulative epsilon across clients: the standard, conservative way to state a per-record DP
+    guarantee for a federation where any client's data could be the "record" of interest.
 
-    This is a SEPARATE guarantee from SecAgg+'s: SecAgg+ bounds what an
-    honest-but-curious/collusion-bounded aggregator can see about any
-    individual client's update (a confidentiality guarantee against the
-    server); the epsilon here is the formal (epsilon, delta) record-level
-    guarantee each client's own data enjoyed even before secret-sharing (a
-    guarantee that holds regardless of what the aggregator does). The two
+    This is a SEPARATE guarantee from SecAgg+'s: SecAgg+ bounds what an honest-but-curious/collusion-bounded aggregator can see about any
+    individual client's update (a confidentiality guarantee against the server); the epsilon here is the formal (epsilon, delta) record-level
+    guarantee each client's own data enjoyed even before secret-sharing (a guarantee that holds regardless of what the aggregator does). The two
     should not be conflated into a single number.
     """
     latest_by_client = {}
@@ -38,8 +32,7 @@ def aggregate_privacy_reports(num_clients, num_rounds):
     }
     per_client_delta = {str(client_id): report["delta"] for client_id, report in latest_by_client.items()}
     worst_case_epsilon = max(per_client_achieved_epsilon.values()) if per_client_achieved_epsilon else None
-    # Delta paired with the worst-case epsilon should be that SAME client's
-    # delta, not just any max -- delta and epsilon are a matched pair per
+    # Delta paired with the worst-case epsilon should be that SAME client's delta, not just any max -- delta and epsilon are a matched pair per
     # accountant, not independently "worst-case-able".
     worst_case_client_id = (
         max(per_client_achieved_epsilon, key=per_client_achieved_epsilon.get) if per_client_achieved_epsilon else None
@@ -49,12 +42,9 @@ def aggregate_privacy_reports(num_clients, num_rounds):
     return {
         "dp_enabled": True,
         "secagg_enabled": True,
-        # achieved_epsilon/delta/target_epsilon/max_grad_norm are the flat
-        # keys centralized/evaluate.py's print_privacy()/results dict already
-        # expects (same shape as centralized/qlora_finetune.py's
-        # single-machine privacy_report.json) -- achieved_epsilon here is the
-        # system-level worst-case cumulative epsilon across clients (see this
-        # function's docstring), not any single client's own number.
+        # achieved_epsilon/delta/target_epsilon/max_grad_norm are the flat keys centralized/evaluate.py's print_privacy()/results dict already
+        # expects (same shape as centralized/qlora_finetune.py's single-machine privacy_report.json) -- achieved_epsilon here is the
+        # system-level worst-case cumulative epsilon across clients (see this function's docstring), not any single client's own number.
         "achieved_epsilon": worst_case_epsilon,
         "delta": per_client_delta.get(worst_case_client_id) if worst_case_client_id else None,
         "target_epsilon": any_report.get("target_epsilon"),

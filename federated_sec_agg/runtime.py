@@ -42,8 +42,7 @@ def train_lock():
 
 
 def get_lora_ndarrays(peft_model):
-    # Sorted key order is the single source of truth both sides agree on --
-    # client and server never need to exchange key names, only the ndarray
+    # Sorted key order is the single source of truth both sides agree on -- client and server never need to exchange key names, only the ndarray
     # list itself (Flower's Parameters are unlabeled).
     state_dict = get_peft_model_state_dict(peft_model)
     keys = sorted(state_dict.keys())
@@ -57,10 +56,8 @@ def set_lora_ndarrays(peft_model, ndarrays, keys):
 
 
 def build_fake_args(run_config):
-    # Maps Flower's flat run_config dict (TOML scalars only: bool/int/float/
-    # str) onto the exact attribute names build_model_and_tokenizer(),
-    # build_tokenized_loader(), and train_dp_sgd() already expect, so those
-    # functions can be called completely unmodified from FL client code.
+    # Maps Flower's flat run_config dict (TOML scalars only: bool/int/float/ str) onto the exact attribute names build_model_and_tokenizer(),
+    # build_tokenized_loader(), and train_dp_sgd() already expect, so those functions can be called completely unmodified from FL client code.
     max_steps = run_config.get("max-steps", 0)
     return SimpleNamespace(
         model_id=run_config["model-id"],
@@ -84,15 +81,11 @@ def build_fake_args(run_config):
 
 
 def load_client_shard(dataset_path, subject_ids, eval_fraction, seed, one_note_per_subject=True):
-    # one_note_per_subject on by default, so every patient contributes exactly
-    # one training example -- pass False (or set pyproject.toml's
-    # one-note-per-subject to false) to opt out and let a client's shard keep
-    # ALL of its subjects' notes instead (a subject with many notes then
-    # contributes proportionally more training examples). See
-    # common.select_one_note_per_subject() (shared with the single-machine
-    # --one-note-per-subject path in centralized/qlora_finetune.py) for why
-    # this is what turns the record-level DP-SGD guarantee into a per-patient
-    # one.
+    # one_note_per_subject on by default, so every patient contributes exactly one training example -- pass False (or set pyproject.toml's
+    # one-note-per-subject to false) to opt out and let a client's shard keep  
+    # ALL of its subjects' notes instead (a subject with many notes then contributes proportionally more training examples). 
+    # See common.select_one_note_per_subject() (shared with the single-machine --one-note-per-subject path in centralized/qlora_finetune.py) for why
+    # this is what turns the record-level DP-SGD guarantee into a per-patient one.
     dataset = load_split(dataset_path, "train", eval_fraction, seed)
     subject_id_set = set(subject_ids)
     shard = dataset.filter(lambda row: row["subject_id"] in subject_id_set)
@@ -102,16 +95,13 @@ def load_client_shard(dataset_path, subject_ids, eval_fraction, seed, one_note_p
 
 
 class BaseModelCache:
-    """Process-global cache for the loaded 4-bit base model + PEFT wrapper.
+    """
+    Process-global cache for the loaded 4-bit base model + PEFT wrapper.
 
-    Flower's simulation backend reuses the same Ray actor process across a
-    client's activations round to round (with client-resources configured
-    for one activation at a time -- see pyproject.toml), so caching here
-    means the 7B checkpoint is quantized/loaded once per process, not once
-    per (client, round) pair. Round-to-round reuse of the same PeftModel
-    object works because train.py's train_dp_sgd() cleans up Opacus's
-    per-sample-gradient hooks after each call -- without that, a second
-    train_dp_sgd() call on the same object would raise "Trying to add hooks
+    Flower's simulation backend reuses the same Ray actor process across a client's activations round to round (with client-resources configured
+    for one activation at a time -- see pyproject.toml), so caching here means the 7B checkpoint is quantized/loaded once per process, not once
+    per (client, round) pair. Round-to-round reuse of the same PeftModel object works because train.py's train_dp_sgd() cleans up Opacus's
+    per-sample-gradient hooks after each call -- without that, a second train_dp_sgd() call on the same object would raise "Trying to add hooks
     twice to the same model".
     """
 
@@ -121,10 +111,8 @@ class BaseModelCache:
 
     @classmethod
     def get_or_load(cls, args):
-        # Guards against two concurrently-dispatched clients both seeing
-        # cls._model is None and racing to load a second 7B copy. Reuses the
-        # same OS-level file lock as train_lock() for the same robustness
-        # reason (see its docstring).
+        # Guards against two concurrently-dispatched clients both seeing cls._model is None and racing to load a second 7B copy. Reuses the
+        # same OS-level file lock as train_lock() for the same robustness reason (see its docstring).
         with train_lock():
             if cls._model is None:
                 cls._load_count += 1
@@ -150,10 +138,8 @@ def load_accountant_history(client_id):
     if not os.path.exists(path):
         return None
     with open(path) as f:
-        # Opacus's accountant.history is a list of (noise_multiplier,
-        # sample_rate, num_steps) tuples; JSON round-trips them as lists,
-        # which unpack identically (a, b, c = [x, y, z] works the same as
-        # a, b, c = (x, y, z)), so no conversion back to tuples is needed.
+        # Opacus's accountant.history is a list of (noise_multiplier, sample_rate, num_steps) tuples; JSON round-trips them as lists,
+        # which unpack identically (a, b, c = [x, y, z] works the same as a, b, c = (x, y, z)), so no conversion back to tuples is needed.
         return json.load(f)
 
 
@@ -180,9 +166,10 @@ def save_client_privacy_report(client_id, server_round, achieved_epsilon, target
 
 
 class LatestParamsHolder:
-    """Mutable box the server's evaluate_fn stashes each round's aggregated
-    LoRA ndarrays into, so the final global state is retrievable after
-    SecAggPlusWorkflow finishes without digging into Strategy internals."""
+    """
+    Mutable box the server's evaluate_fn stashes each round's aggregated LoRA ndarrays into, so the final global state is retrievable after
+    SecAggPlusWorkflow finishes without digging into Strategy internals.
+    """
 
     round = None
     ndarrays = None

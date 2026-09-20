@@ -21,35 +21,28 @@ app = ServerApp()
 
 @app.main()
 def main(grid, context: Context) -> None:
-    # See federated/config.py: run_config is loaded from pyproject.toml
-    # rather than from context.run_config.
+    # See federated/config.py: run_config is loaded from pyproject.toml rather than from context.run_config.
     run_config  = load_run_config()
     num_clients = int(run_config["num-clients"])
     num_rounds  = int(run_config["num-server-rounds"])
 
     manifest = load_manifest()
-    # The one thing that can silently desync client and server: the manifest
-    # partition_data.py wrote must actually have num_clients shards, or some
-    # clients would be training on a shard that doesn't exist / colliding
-    # with another client's supposed shard.
+    # The one thing that can silently desync client and server: the manifest partition_data.py wrote must actually have num_clients shards, or some
+    # clients would be training on a shard that doesn't exist / colliding with another client's supposed shard.
     assert len(manifest["clients"]) == num_clients, (
         f"pyproject.toml's num-clients={num_clients} does not match "
         f"manifest.json's {len(manifest['clients'])} client shards - rerun partition_data.py"
     )
-    # SecAggPlusWorkflow.setup_stage() hard-requires at least 2 sampled clients
-    # (pairwise masking has no counterpart to cancel against with only one) --
-    # with fewer, it logs an error and returns False, which just makes
-    # DefaultWorkflow silently skip every round's fit with no exception raised.
-    # Centralized eval still runs each round regardless, so the run "succeeds"
-    # end-to-end while saving an untrained (zero-init LoRA) adapter. Fail loudly
+    # SecAggPlusWorkflow.setup_stage() hard-requires at least 2 sampled clients (pairwise masking has no counterpart to cancel against with only one) --
+    # with fewer, it logs an error and returns False, which just makes DefaultWorkflow silently skip every round's fit with no exception raised.
+    # Centralized eval still runs each round regardless, so the run "succeeds" end-to-end while saving an untrained (zero-init LoRA) adapter. Fail loudly
     # here instead, before paying for a 7B model load.
     assert num_clients >= 2, (
         f"num-clients={num_clients}, but SecAgg+ requires at least 2 clients per "
         f"round (see flwr's SecAggPlusWorkflow.setup_stage) -- with fewer, fit "
         f"silently no-ops every round instead of raising"
     )
-    # Also validated here (not just inside the workflow later) so a bad config
-    # fails before the 7B model load below, not after.
+    # Also validated here (not just inside the workflow later) so a bad config fails before the 7B model load below, not after.
     secagg_max_weight = float(run_config["secagg-max-weight"])
     max_shard_rows = max(c["num_rows"] for c in manifest["clients"])
     assert secagg_max_weight > max_shard_rows, (
@@ -60,10 +53,8 @@ def main(grid, context: Context) -> None:
     fake_args = build_fake_args(run_config)
     fake_args.dataset = manifest["dataset"]
 
-    # Built once, server-side only: gives a shape-correct, zero-initialized
-    # (lora_B is zero-init by construction) starting adapter for
-    # initial_parameters, and is reused after the run to hold + save the
-    # final aggregated LoRA weights and to run centralized held-out eval.
+    # Built once, server-side only: gives a shape-correct, zero-initialized (lora_B is zero-init by construction) starting adapter for
+    # initial_parameters, and is reused after the run to hold + save the final aggregated LoRA weights and to run centralized held-out eval.
     peft_model, tokenizer = build_model_and_tokenizer(fake_args)
     initial_ndarrays, keys = get_lora_ndarrays(peft_model)
     initial_parameters = ndarrays_to_parameters(initial_ndarrays)
@@ -84,14 +75,11 @@ def main(grid, context: Context) -> None:
 
     # Deliberately NOT cast to int.
     # TOML gives these back as whatever numeric type was authored (int or float)
-    # SecAggPlusWorkflow treats the two differently:
-    # A float is a *proportion* of participating clients (see
-    # pyproject.toml's comment), so e.g. int(0.6) silently truncating to 0
-    # would corrupt the intended 60% threshold into "no shares needed".
+    # SecAggPlusWorkflow treats the two differently: A float is a *proportion* of participating clients (see
+    # pyproject.toml's comment), so e.g. int(0.6) silently truncating to 0 would corrupt the intended 60% threshold into "no shares needed".
     secagg_num_shares = run_config["secagg-num-shares"]
     secagg_threshold = run_config["secagg-reconstruction-threshold"]
-    # secagg_max_weight/max_shard_rows already validated above, before the
-    # model load.
+    # secagg_max_weight/max_shard_rows already validated above, before the model load.
 
     strategy = FedAvg(
         fraction_fit=1.0,
