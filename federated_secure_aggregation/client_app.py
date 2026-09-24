@@ -7,8 +7,8 @@ from flwr.client.mod import secaggplus_mod
 from flwr.common import Context
 
 from common import build_tokenized_loader
-from federated.config import load_run_config
-from federated.runtime import (
+from federated_secure_aggregation.config import load_run_config
+from federated_secure_aggregation.runtime import (
     BaseModelCache,
     build_fake_args,
     get_lora_ndarrays,

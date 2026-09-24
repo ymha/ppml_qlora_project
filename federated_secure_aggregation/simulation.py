@@ -2,9 +2,9 @@ import argparse
 
 from flwr.simulation import run_simulation
 
-from federated.client_app import app as client_app
-from federated.config import load_run_config
-from federated.server_app import app as server_app
+from federated_secure_aggregation.client_app import app as client_app
+from federated_secure_aggregation.config import load_run_config
+from federated_secure_aggregation.server_app import app as server_app
 
 
 def parse_args():

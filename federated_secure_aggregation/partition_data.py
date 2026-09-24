@@ -5,7 +5,7 @@ import random
 from collections import Counter
 
 from common import add_data_args, load_split
-from federated.config import load_run_config
+from federated_secure_aggregation.config import load_run_config
 
 DEFAULT_MANIFEST_PATH = os.path.join(os.path.dirname(__file__), "partitions", "manifest.json")
 

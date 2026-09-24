@@ -9,10 +9,10 @@ from flwr.server.strategy import FedAvg
 from flwr.server.workflow import DefaultWorkflow, SecAggPlusWorkflow
 
 from common import build_eval_loader, build_model_and_tokenizer, perplexity
-from federated.client_app import load_manifest
-from federated.config import load_run_config
-from federated.runtime import LatestParamsHolder, build_fake_args, get_lora_ndarrays, set_lora_ndarrays
-from federated.privacy_report import aggregate_privacy_reports
+from federated_secure_aggregation.client_app import load_manifest
+from federated_secure_aggregation.config import load_run_config
+from federated_secure_aggregation.runtime import LatestParamsHolder, build_fake_args, get_lora_ndarrays, set_lora_ndarrays
+from federated_secure_aggregation.privacy_report import aggregate_privacy_reports
 
 GLOBAL_ADAPTER_DIR = os.path.join(os.path.dirname(__file__), "global-adapter")
 
